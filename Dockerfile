@@ -6,7 +6,7 @@
 #    By: nkuipers <nkuipers@student.codam.nl>         +#+                      #
 #                                                    +#+                       #
 #    Created: 2020/01/16 16:13:10 by nkuipers       #+#    #+#                 #
-#    Updated: 2020/01/17 12:02:07 by nkuipers      ########   odam.nl          #
+#    Updated: 2020/01/17 15:06:10 by nkuipers      ########   odam.nl          #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,7 @@ FROM    debian:buster
 # Setup and install nginx and other packages
 RUN     apt update && \
         apt -y upgrade && \
-        apt install -y nginx mariadb-server php7.3-fpm php-mysql php-common php-mbstring vim unzip wget sendmail
+        apt install -y nginx mariadb-server php7.3-fpm php-mysql php-common php-mbstring php-zip vim unzip wget sendmail sudo
 
 RUN     rm -rf /usr/share/nginx/www
 
@@ -23,7 +23,8 @@ RUN     rm -rf /usr/share/nginx/www
 RUN     mkdir -p /var/www/localhost
 COPY    srcs/nginx-host-conf /etc/nginx/sites-available/localhost
 RUN     ln -s /etc/nginx/sites-available/localhost /etc/nginx/sites-enabled
-COPY    srcs/index.html /var/www/localhost
+RUN     mkdir -p /var/www/localhost/index/
+COPY    srcs/index.html /var/www/localhost/index/
 
 # Creating the mysql database
 RUN     service mysql start; \
@@ -50,7 +51,7 @@ COPY    srcs/config.inc.php /var/www/localhost/wordpress/phpmyadmin
 COPY    srcs/php.ini /etc/php/7.3/fpm/php.ini
 
 # Downloading and installing WP-CLI
-COPY    srcs/my.cnf /etc/mysql/my.cnf
+COPY    srcs/my.cnf /etc/my.cnf
 RUN     chmod -R 755 /var/run/mysqld
 RUN     wget -c https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
         chmod +x wp-cli.phar && \
@@ -59,8 +60,8 @@ RUN     wp cli update
 RUN     mkdir -p /var/www/localhost/wordpress
 
 # Changing the accessibility of files
-RUN		chown -R www-data:www-data /var/www/localhost/*
-RUN		chmod -R 755 /var/www/localhost/*
+RUN		chown -R www-data:www-data /var/www/localhost/* && \
+    	chmod -R 755 /var/www/localhost/*
 
 # Setup wordpress page, and change the theme
 RUN     service mysql start && \
@@ -69,6 +70,9 @@ RUN     service mysql start && \
         wp core install --path=/var/www/localhost/wordpress --url=localhost --title="nkuipers_ft_server" --admin_name=nkuipers --admin_password=password --admin_email=nkuipers@student.codam.nl --allow-root && \
         chmod 644 /var/www/localhost/wordpress/wp-config.php && \
         wp theme install https://downloads.wordpress.org/theme/shapely.1.2.8.zip --path=/var/www/localhost/wordpress --activate --allow-root
+
+# expose ports for default http, default https, and sendmail, respectively.
+EXPOSE 80 443 110
 
 # Commands for starting the container
 CMD     service mysql start && \
